@@ -56,17 +56,19 @@ function loadRegexFromString(regexString) {
 }
 
 function getRegExpMatches(regExp, string) {
-  return [...string.matchAll(regExp)].map((match) => match[0]);
+  const matches = [...string.matchAll(regExp)].map((match) => match[0]);
+  console.log(regExp, string, matches);
+  return matches;
 }
 
 function getIssueIds(messages, prTitle) {
   const issueIds = [];
   for (const message of messages) {
-    issueIds.push(getRegExpMatches(findCommitRegex, message));
+    issueIds.push(...getRegExpMatches(findCommitRegex, message));
   }
 
   if (prTitle) {
-    issueIds.push(getRegExpMatches(findTitleRegex, prTitle));
+    issueIds.push(...getRegExpMatches(findTitleRegex, prTitle));
   }
 
   return [...new Set(issueIds)];
