@@ -47,7 +47,7 @@ async function run() {
   const commitMessages = await fetchCommitMessages(octokit);
   const issueIds = getIssueIds(commitMessages);
 
-  core.info(`test ${github.context.pull_request.title}`);
+  core.info(`test ${github.context.payload.pull_request.title}`);
   core.info(JSON.stringify(commitMessages));
   core.info(JSON.stringify(issueIds));
 }
