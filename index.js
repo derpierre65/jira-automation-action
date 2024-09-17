@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import {issue} from '@actions/core/lib/command.js';
 
 let findCommitRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let findTitleRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
@@ -76,11 +77,24 @@ function callWebhook(issueIds, status) {
   const issuePrefixUrls = {};
   for (const url of webhookUrls) {
     const issuePrefix = url.slice(0, url.indexOf(':'));
-    const webhookUrl = url.slice(url.indexOf(':'));
+    const webhookUrl = url.slice(url.indexOf(':') + 1);
+
     issuePrefixUrls[issuePrefix] = webhookUrl;
   }
+
+  const webhooks = {};
+  const prefixes = Object.keys(webhookUrls);
+  for (const issueId of issueIds) {
+    const matchPrefixes = prefixes.filter((prefix) => prefix === '*' || issueId.startsWith(prefix));
+    for (const prefix of matchPrefixes) {
+      webhooks[prefix] ??= [];
+      webhooks[prefix].push(issueId);
+    }
+  }
+
   console.log(`pull request status: ${status}`);
   console.log(issuePrefixUrls);
+  console.log(webhooks);
   console.log(JSON.stringify(github.context, null, 4));
 }
 
