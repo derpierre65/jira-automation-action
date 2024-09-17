@@ -7,8 +7,12 @@ inputs:
   ignore_title:
     description: 'Ignore the pull request title to find issue ids'
     default: 'false'
+  ignore_commits:
+    description: 'Ignore commit messages to find issue ids'
+    default: 'false'
   GITHUB_TOKEN:
     description: 'Your GitHub token.'
+    required: true
   urls:
     description: 'todo'
     required: true

@@ -60,9 +60,10 @@ async function run() {
 
   // load settings
   const ignoreTitle = core.getBooleanInput('ignore_title');
+  const ignoreCommits = core.getBooleanInput('ignore_commits');
 
   const octokit = github.getOctokit(token);
-  const commitMessages = await fetchCommitMessages(octokit);
+  const commitMessages = ignoreCommits ? [] : await fetchCommitMessages(octokit);
   const pullRequest = await getPullRequestData(octokit);
 
   // add pull request to commit messages to fetch the issue ids from title
