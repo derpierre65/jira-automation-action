@@ -10,7 +10,7 @@ async function getPullRequestData(octokit) {
   return pullRequest;
 }
 
-async function getReviewData(octokit) {
+async function getReviews(octokit) {
   const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/reviews`);
 
   return data;
@@ -71,6 +71,10 @@ function getIssueIds(messages, prTitle) {
   return [...new Set(issueIds)];
 }
 
+function callWebhook(issueIds, status) {
+  console.log(`pull request status: ${status}`);
+}
+
 async function run() {
   const token = core.getInput('GITHUB_TOKEN');
   if (!token) {
@@ -81,6 +85,7 @@ async function run() {
   // load settings
   const ignoreTitle = core.getBooleanInput('ignore-title');
   const ignoreCommits = core.getBooleanInput('ignore-commits');
+  const approvedThreshold = core.getInput('approved-threshold');
 
   findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));
   findTitleRegex = loadRegexFromString(core.getInput('find-regex-title'));
@@ -107,11 +112,39 @@ async function run() {
   console.log('urls', core.getInput('webhook-urls'));
   console.log(JSON.stringify(github.context, null, 4));
 
-  const reviewData = await getReviewData(octokit);
-  console.log(JSON.stringify(reviewData, null, 4));
+  let reviewers = 0;
+  let approvals = 0;
 
-  const reviewers = await getRequestedReviewers(octokit);
-  console.log(JSON.stringify(reviewers, null, 4));
+  const reviews = await getReviews(octokit);
+  for (const review of reviews) {
+    if (review.user.type === 'Bot') {
+      continue;
+    }
+
+    reviewers++;
+    if (review.state === 'APPROVED') {
+      approvals++;
+    }
+  }
+
+  const requiredApprovals = parseInt(approvedThreshold);
+
+  if (!approvedThreshold.includes('%')) {
+    if (approvals >= requiredApprovals) {
+      return callWebhook(issueIds, 'approved');
+    }
+
+    return callWebhook(issueIds, 'in_review');
+  }
+
+  const requestedReviewers = await getRequestedReviewers(octokit);
+  reviewers += requestedReviewers.users.filter((user) => user.type === 'User').length;
+
+  console.log({
+    reviewers,
+    approvals,
+    requiredApprovals,
+  });
 }
 
 run().catch(error => core.setFailed(error.message));
