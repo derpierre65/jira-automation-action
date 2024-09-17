@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 
 async function getPullRequestData(octokit) {
-  const {data: pullRequest} = await octokit.request(`GET ${github.context.payload.pull_request.self_url}`);
+  const {data: pullRequest} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}`);
 
   return pullRequest;
 }
@@ -51,12 +51,12 @@ async function run() {
 
   const octokit = github.getOctokit(token);
   const commitMessages = await fetchCommitMessages(octokit);
+  const pullRequest = await getPullRequestData(octokit);
   const issueIds = getIssueIds(commitMessages);
 
-  core.info(`test ${github.context.payload.pull_request.self_url}`);
-  core.info(`test ${github.context.payload.pull_request._links.self.href}`);
   core.info(JSON.stringify(commitMessages));
   core.info(JSON.stringify(issueIds));
+  core.info(JSON.stringify(pullRequest));
 }
 
 run().catch(error => core.setFailed(error.message));
