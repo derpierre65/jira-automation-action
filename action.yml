@@ -4,15 +4,21 @@ branding:
   icon: 'cloud'
   color: 'blue'
 inputs:
+  GITHUB_TOKEN:
+    description: 'Your GitHub token.'
+    required: true
   ignore_title:
     description: 'Ignore the pull request title to find issue ids'
     default: 'false'
   ignore_commits:
     description: 'Ignore commit messages to find issue ids'
     default: 'false'
-  GITHUB_TOKEN:
-    description: 'Your GitHub token.'
-    required: true
+  find-regex-commits:
+    description: 'Regex to find issue ids in commit messages'
+    default: '/([A-Za-z]{2,4}-\\d+)/g'
+  find-regex-title:
+    description: 'Regex to find issue ids in pull request title'
+    default: '/([A-Za-z]{2,4}-\\d+)/g'
   urls:
     description: 'todo'
     required: true
