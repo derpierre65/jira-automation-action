@@ -147,6 +147,8 @@ async function run() {
     return callWebhook(issueIds, PullRequestStatus.DRAFT);
   }
 
+  console.log(github.context.payload.pull_request);
+
   let reviewers = 0;
   let approvals = 0;
   let changesRequested = false;
