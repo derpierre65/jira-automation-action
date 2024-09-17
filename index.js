@@ -12,6 +12,7 @@ async function getReviewData(octokit) {
 
   return data;
 }
+
 async function getRequestedReviewers(octokit) {
   const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/requested_reviewers`);
 
@@ -57,12 +58,17 @@ async function run() {
     return;
   }
 
+  // load settings
+  const ignoreTitle = core.getBooleanInput('ignore_title');
+
   const octokit = github.getOctokit(token);
   const commitMessages = await fetchCommitMessages(octokit);
   const pullRequest = await getPullRequestData(octokit);
 
   // add pull request to commit messages to fetch the issue ids from title
-  commitMessages.push(pullRequest.title);
+  if (!ignoreTitle) {
+    commitMessages.push(pullRequest.title);
+  }
 
   // get all issue ids in commit message and pull request title
   const issueIds = getIssueIds(commitMessages);
