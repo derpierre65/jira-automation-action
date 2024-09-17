@@ -4,6 +4,7 @@ import axios from 'axios';
 
 let findCommitRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let findTitleRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
+let octokit = null;
 
 const PullRequestStatus = {
   CHANGES_REQUESTED: 'changes_requested',
@@ -13,7 +14,7 @@ const PullRequestStatus = {
   MERGED: 'merged',
 };
 
-async function getReviews(octokit, owner, repository, id) {
+async function getReviews(owner, repository, id) {
   const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/reviews`, {
     per_page: 100,
   });
@@ -25,13 +26,13 @@ async function getReviews(octokit, owner, repository, id) {
   return data;
 }
 
-async function getRequestedReviewers(octokit, owner, repository) {
+async function getRequestedReviewers(owner, repository) {
   const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/requested_reviewers`);
 
   return data;
 }
 
-async function getPullRequests(octokit, owner, repository) {
+async function getPullRequests(owner, repository) {
   const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls`, {
     per_page: 100,
   });
@@ -39,7 +40,7 @@ async function getPullRequests(octokit, owner, repository) {
   return data;
 }
 
-async function fetchCommitMessages(octokit) {
+async function fetchCommitMessages() {
   const commitMessages = [];
   let hasMoreCommits = true;
   let perPage = 100;
@@ -139,8 +140,8 @@ async function run() {
   findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));
   findTitleRegex = loadRegexFromString(core.getInput('find-regex-title'));
 
-  const octokit = github.getOctokit(token);
-  const commitMessages = ignoreCommits ? [] : await fetchCommitMessages(octokit);
+  octokit = github.getOctokit(token);
+  const commitMessages = ignoreCommits ? [] : await fetchCommitMessages();
   const pullRequestTitle = ignoreTitle ? '' : github.context.payload.pull_request.title;
   const ownerName = github.context.payload.pull_request.base.repo.owner.login;
   const repository = github.context.payload.pull_request.base.repo.name;
@@ -153,7 +154,7 @@ async function run() {
   }
 
   core.info(`payload ${JSON.stringify(github.context.payload.pull_request, null, 4)}`);
-  // core.info(JSON.stringify(await getPullRequests(octokit)));
+  // core.info(JSON.stringify(await getPullRequests()));
 
   if (github.context.payload.pull_request.merged) {
     return callWebhook(issueIds, PullRequestStatus.MERGED);
@@ -166,7 +167,7 @@ async function run() {
   const reviewers = {};
 
   // fetch all reviews
-  const reviews = await getReviews(octokit, ownerName, repository, github.context.payload.pull_request.number);
+  const reviews = await getReviews(ownerName, repository, github.context.payload.pull_request.number);
   for (const review of reviews) {
     if (review.user.type === 'Bot') {
       continue;
@@ -175,7 +176,7 @@ async function run() {
     reviewers[review.user.id] = review.state;
   }
 
-  const requestedReviewers = (await getRequestedReviewers(octokit, ownerName, repository)).users.filter((user) => user.type === 'User');
+  const requestedReviewers = (await getRequestedReviewers(ownerName, repository)).users.filter((user) => user.type === 'User');
   for (const reviewer of requestedReviewers) {
     reviewers[reviewer.id] = 'PENDING';
   }
