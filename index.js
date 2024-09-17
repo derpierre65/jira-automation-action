@@ -9,6 +9,8 @@ async function run() {
       return;
     }
 
+    const context = github.context;
+
     // /([A-Za-z]{2,4}-\d+)/g
 
     console.log('urls', core.getInput('urls'));
