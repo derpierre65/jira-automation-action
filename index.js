@@ -146,8 +146,6 @@ async function run() {
   }
 
   const reviewers = {};
-  let approvals = 0;
-  let changesRequested = false;
 
   core.info(JSON.stringify(await getRequestedReviewers(octokit), null, 4));
 
@@ -169,8 +167,8 @@ async function run() {
   }
 
   const reviewersStates = Object.values(reviewers);
-  approvals = reviewersStates.filter((state) => state === 'APPROVED').length;
-  changesRequested = reviewersStates.filter((state) => state === 'CHANGES_REQUESTED').length;
+  const approvals = reviewersStates.filter((state) => state === 'APPROVED').length;
+  const changesRequested = reviewersStates.filter((state) => state === 'CHANGES_REQUESTED').length;
 
   // use changes_requested as state if forceChangesRequested is true, otherwise check the approval threshold
   if (forceChangesRequested && changesRequested) {
