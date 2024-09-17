@@ -131,6 +131,8 @@ async function run() {
     return;
   }
 
+  console.log(github.context.payload.pull_request.labels);
+
   if (github.context.payload.pull_request.draft) {
     return callWebhook(issueIds, PullRequestStatus.DRAFT);
   }
