@@ -12,12 +12,6 @@ const PullRequestStatus = {
   DRAFT: 'draft',
 };
 
-async function getPullRequestData(octokit) {
-  const {data: pullRequest} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}`);
-
-  return pullRequest;
-}
-
 async function getReviews(octokit) {
   const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/reviews`);
 
@@ -128,13 +122,7 @@ async function run() {
 
   const octokit = github.getOctokit(token);
   const commitMessages = ignoreCommits ? [] : await fetchCommitMessages(octokit);
-  const pullRequest = await getPullRequestData(octokit);
-  let pullRequestTitle = '';
-
-  // add pull request to commit messages to fetch the issue ids from title
-  if (!ignoreTitle) {
-    pullRequestTitle = pullRequest.title;
-  }
+  const pullRequestTitle = ignoreTitle ? '' : github.context.payload.pull_request.title;
 
   // get all issue ids in commit message and pull request title
   const issueIds = getIssueIds(commitMessages, pullRequestTitle);
@@ -146,8 +134,6 @@ async function run() {
   if (github.context.payload.pull_request.draft) {
     return callWebhook(issueIds, PullRequestStatus.DRAFT);
   }
-
-  console.log(github.context.payload.pull_request);
 
   let reviewers = 0;
   let approvals = 0;
