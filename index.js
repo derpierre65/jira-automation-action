@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import axios from 'axios';
 
 let findCommitRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let findTitleRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
@@ -55,9 +56,7 @@ function loadRegexFromString(regexString) {
 }
 
 function getRegExpMatches(regExp, string) {
-  const matches = [...string.matchAll(regExp)].map((match) => match[0]);
-  console.log(regExp, string, matches);
-  return matches;
+  return [...string.matchAll(regExp)].map((match) => match[0]);
 }
 
 function getIssueIds(messages, prTitle) {
@@ -81,27 +80,27 @@ function callWebhook(issueIds, status) {
     webhookUrlsByPrefix[url.slice(0, colonPosition)] = url.slice(colonPosition + 1);
   }
 
-  const webhooks = {};
+  const webhookIssues = {};
   const prefixes = Object.keys(webhookUrlsByPrefix);
   for (const issueId of issueIds) {
     const matchPrefixes = prefixes.filter((prefix) => prefix === '*' || issueId.indexOf(prefix) === 0);
 
-    prefixes.map((prefix) => {
-      console.log(`prefix ${prefix} | issueId ${issueId} | ${issueId.indexOf(prefix)}`);
-    })
-
-    console.log(issueId, matchPrefixes);
     for (const prefix of matchPrefixes) {
-      webhooks[prefix] ??= [];
-      webhooks[prefix].push(issueId);
+      webhookIssues[prefix] ??= [];
+      webhookIssues[prefix].push(issueId);
     }
   }
 
-  console.log(`pull request status: ${status}`);
-  console.log(issueIds);
-  console.log(webhookUrlsByPrefix);
-  console.log(webhooks);
-  console.log(JSON.stringify(github.context, null, 4));
+  core.info(`pull request status: ${status}`);
+  for ( const key of Object.keys(webhookIssues) ) {
+    core.info(`call webhook ${key} with issue ids: ${webhookIssues[key].join(', ')}`);
+    axios.post(webhookUrlsByPrefix[key], {
+      issues: webhookIssues[key],
+      pullRequest: {
+        status,
+      }
+    });
+  }
 }
 
 async function run() {
@@ -156,7 +155,6 @@ async function run() {
   }
 
   const requiredApprovals = parseInt(approvedThreshold);
-
   if (!approvedThreshold.includes('%')) {
     if (approvals >= requiredApprovals) {
       return callWebhook(issueIds, 'approved');
