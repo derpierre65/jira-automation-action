@@ -10,7 +10,7 @@ async function fetchCommitMessages(octokit) {
   while (hasMoreCommits) {
     core.info(`Fetching commits page ${page}`);
 
-    const { data: commits } = await octokit.request(`GET ${context.payload.pull_request.commits_url}`, {
+    const {data: commits} = await octokit.request(`GET ${github.context.payload.pull_request.commits_url}`, {
       page,
       per_page: perPage,
     });
@@ -26,7 +26,7 @@ async function fetchCommitMessages(octokit) {
 
 function getIssueIds(messages) {
   const issueIds = [];
-  for ( const message of messages ) {
+  for (const message of messages) {
     issueIds.push(...message.match(/([A-Za-z]{2,4}-\d+)/g) || []);
   }
 
@@ -34,28 +34,22 @@ function getIssueIds(messages) {
 }
 
 async function run() {
-  try {
-    const token = core.getInput('GITHUB_TOKEN');
-    if (!token) {
-      core.setFailed('GITHUB_TOKEN is required');
-      return;
-    }
-
-    const context = github.context;
-
-    console.log('urls', core.getInput('urls'));
-    console.log(JSON.stringify(github.context, null, 4));
-
-    const octokit = github.getOctokit(token);
-    const commitMessages = await fetchCommitMessages(octokit);
-    const issueIds = getIssueIds(commitMessages);
-
-    core.info(JSON.stringify(commitMessages));
-    core.info(JSON.stringify(issueIds));
+  const token = core.getInput('GITHUB_TOKEN');
+  if (!token) {
+    core.setFailed('GITHUB_TOKEN is required');
+    return;
   }
-  catch (error) {
-    core.setFailed(error.message);
-  }
+
+  console.log('urls', core.getInput('urls'));
+  console.log(JSON.stringify(github.context, null, 4));
+
+  const octokit = github.getOctokit(token);
+  const commitMessages = await fetchCommitMessages(octokit);
+  const issueIds = getIssueIds(commitMessages);
+
+  core.info(`test ${github.context.pull_request.title}`);
+  core.info(JSON.stringify(commitMessages));
+  core.info(JSON.stringify(issueIds));
 }
 
-run();
+run().catch(error => core.setFailed(error.message));
