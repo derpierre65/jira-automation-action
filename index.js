@@ -154,6 +154,8 @@ async function run() {
   let approvals = 0;
   let changesRequested = false;
 
+  core.info(JSON.stringify(await getRequestedReviewers(octokit), null, 4));
+
   const reviews = await getReviews(octokit);
   for (const review of reviews) {
     if (review.user.type === 'Bot') {
@@ -170,7 +172,7 @@ async function run() {
     if (review.state === 'CHANGES_REQUESTED') {
       changesRequested = true;
       if (forceChangesRequested) {
-        return callWebhook(issueIds, PullRequestStatus.CHANGES_REQUESTED);
+        // return callWebhook(issueIds, PullRequestStatus.CHANGES_REQUESTED);
       }
     }
   }
