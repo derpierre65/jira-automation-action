@@ -13,8 +13,8 @@ const PullRequestStatus = {
   MERGED: 'merged',
 };
 
-async function getReviews(octokit) {
-  const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/reviews`, {
+async function getReviews(octokit, owner, repository, id) {
+  const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/reviews`, {
     per_page: 100,
   });
 
@@ -25,14 +25,16 @@ async function getReviews(octokit) {
   return data;
 }
 
-async function getRequestedReviewers(octokit) {
-  const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/requested_reviewers`);
+async function getRequestedReviewers(octokit, owner, repository) {
+  const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/requested_reviewers`);
 
   return data;
 }
 
-async function getPullRequest(octokit) {
-  const {data} = await octokit.request(`GET https://api.github.com/repos/derpierre65/jira-automation-action/pulls`);
+async function getPullRequests(octokit, owner, repository) {
+  const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls`, {
+    per_page: 100,
+  });
 
   return data;
 }
@@ -140,6 +142,8 @@ async function run() {
   const octokit = github.getOctokit(token);
   const commitMessages = ignoreCommits ? [] : await fetchCommitMessages(octokit);
   const pullRequestTitle = ignoreTitle ? '' : github.context.payload.pull_request.title;
+  const ownerName = github.context.payload.pull_request.base.repo.owner.login;
+  const repository = github.context.payload.pull_request.base.repo.name;
 
   // get all issue ids in commit message and pull request title
   const issueIds = getIssueIds(commitMessages, pullRequestTitle);
@@ -149,7 +153,7 @@ async function run() {
   }
 
   core.info(`payload ${JSON.stringify(github.context.payload.pull_request, null, 4)}`);
-  core.info(JSON.stringify(await getPullRequest(octokit)));
+  // core.info(JSON.stringify(await getPullRequests(octokit)));
 
   if (github.context.payload.pull_request.merged) {
     return callWebhook(issueIds, PullRequestStatus.MERGED);
@@ -162,7 +166,7 @@ async function run() {
   const reviewers = {};
 
   // fetch all reviews
-  const reviews = await getReviews(octokit);
+  const reviews = await getReviews(octokit, ownerName, repository, github.context.payload.pull_request.number);
   for (const review of reviews) {
     if (review.user.type === 'Bot') {
       continue;
@@ -171,7 +175,7 @@ async function run() {
     reviewers[review.user.id] = review.state;
   }
 
-  const requestedReviewers = (await getRequestedReviewers(octokit)).users.filter((user) => user.type === 'User');
+  const requestedReviewers = (await getRequestedReviewers(octokit, ownerName, repository)).users.filter((user) => user.type === 'User');
   for (const reviewer of requestedReviewers) {
     reviewers[reviewer.id] = 'PENDING';
   }
