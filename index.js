@@ -73,6 +73,8 @@ function getIssueIds(messages, prTitle) {
 
 function callWebhook(issueIds, status) {
   console.log(`pull request status: ${status}`);
+  console.log('webhook-urls', core.getInput('webhook-urls'));
+  console.log(JSON.stringify(github.context, null, 4));
 }
 
 async function run() {
@@ -107,10 +109,9 @@ async function run() {
     return;
   }
 
-  const pullRequestState = pullRequest.state;
-
-  console.log('urls', core.getInput('webhook-urls'));
-  console.log(JSON.stringify(github.context, null, 4));
+  if (github.context.payload.pull_request.draft) {
+    return callWebhook(issueIds, 'in_review');
+  }
 
   let reviewers = 0;
   let approvals = 0;
@@ -140,11 +141,12 @@ async function run() {
   const requestedReviewers = await getRequestedReviewers(octokit);
   reviewers += requestedReviewers.users.filter((user) => user.type === 'User').length;
 
-  console.log({
-    reviewers,
-    approvals,
-    requiredApprovals,
-  });
+  const approvalPercent = approvals / reviewers * 100;
+  if (approvalPercent >= approvedThreshold) {
+    return callWebhook(issueIds, 'approved');
+  }
+
+  return callWebhook(issueIds, 'in_review');
 }
 
 run().catch(error => core.setFailed(error.message));
