@@ -7,9 +7,6 @@ inputs:
   urls:
     description: 'todo'
     required: true
-  status:
-    description: 'todo'
-    required: true
 runs:
   using: 'node20'
   main: 'action/index.js'
