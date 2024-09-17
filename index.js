@@ -31,6 +31,12 @@ async function getRequestedReviewers(octokit) {
   return data;
 }
 
+async function getPullRequest(octokit) {
+  const {data} = await octokit.request(`GET https://api.github.com/repos/derpierre65/jira-automation-action/pulls`);
+
+  return data;
+}
+
 async function fetchCommitMessages(octokit) {
   const commitMessages = [];
   let hasMoreCommits = true;
@@ -141,6 +147,9 @@ async function run() {
     // do nothing, no issue ids found.
     return;
   }
+
+  core.info(`payload ${JSON.stringify(github.context.payload.pull_request, null, 4)}`);
+  core.info(JSON.stringify(await getPullRequest(octokit)));
 
   if (github.context.payload.pull_request.merged) {
     return callWebhook(issueIds, PullRequestStatus.MERGED);
