@@ -10,6 +10,7 @@ const PullRequestStatus = {
   IN_REVIEW: 'in_review',
   APPROVED: 'approved',
   DRAFT: 'draft',
+  MERGED: 'merged',
 };
 
 async function getReviews(octokit) {
@@ -98,9 +99,9 @@ function callWebhook(issueIds, status) {
     }
   }
 
-  core.info(`pull request status: ${status}`);
+  core.info(`Pull request status: ${status}`);
   for (const key of Object.keys(webhookIssues)) {
-    core.info(`call webhook ${key} with issue ids: ${webhookIssues[key].join(', ')}`);
+    core.info(`Call webhook ${key} with issue ids: ${webhookIssues[key].join(', ')}`);
     axios.post(webhookUrlsByPrefix[key], {
       issues: webhookIssues[key],
       pullRequest: {
@@ -141,13 +142,15 @@ async function run() {
     return;
   }
 
+  if (github.context.payload.pull_request.merged) {
+    return callWebhook(issueIds, PullRequestStatus.MERGED);
+  }
+
   if (github.context.payload.pull_request.draft) {
     return callWebhook(issueIds, PullRequestStatus.DRAFT);
   }
 
   const reviewers = {};
-
-  core.info(JSON.stringify(github.context.payload.pull_request, null, 4));
 
   // fetch all reviews
   const reviews = await getReviews(octokit);
