@@ -99,6 +99,10 @@ function callWebhook(issueIds, status) {
       issues: webhookIssues[key],
       pullRequest: {
         status,
+        title: github.context.payload.pull_request.title,
+        labels: github.context.payload.pull_request.labels.map((label) => {
+          return label.name;
+        }),
       }
     });
   }
@@ -130,8 +134,6 @@ async function run() {
     // do nothing, no issue ids found.
     return;
   }
-
-  console.log(github.context.payload.pull_request.labels);
 
   if (github.context.payload.pull_request.draft) {
     return callWebhook(issueIds, PullRequestStatus.DRAFT);
