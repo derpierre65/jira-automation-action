@@ -136,7 +136,7 @@ async function run() {
   }
 
   if (github.context.payload.pull_request.draft) {
-    return callWebhook(issueIds, 'in_review');
+    return callWebhook(issueIds, 'draft');
   }
 
   let reviewers = 0;
