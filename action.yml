@@ -15,10 +15,10 @@ inputs:
     default: 'false'
   find-regex-commits:
     description: 'Regex to find issue ids in commit messages'
-    default: '/([A-Za-z]{2,4}-\\d+)/g'
+    default: '/([A-Za-z]{2,4}-\d+)/g'
   find-regex-title:
     description: 'Regex to find issue ids in pull request title'
-    default: '/([A-Za-z]{2,4}-\\d+)/g'
+    default: '/([A-Za-z]{2,4}-\d+)/g'
   approved-threshold:
     description: 'Approvals required (in percent (50%) or as a number (2)) before a pull requests state is "approved"'
     default: '1'

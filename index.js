@@ -1,6 +1,5 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import {issue} from '@actions/core/lib/command.js';
 
 let findCommitRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let findTitleRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
