@@ -147,7 +147,7 @@ async function run() {
 
   const reviewers = {};
 
-  core.info(JSON.stringify(await getRequestedReviewers(octokit), null, 4));
+  core.info(JSON.stringify(github.context.payload.pull_request, null, 4));
 
   // fetch all reviews
   const reviews = await getReviews(octokit);
@@ -155,8 +155,6 @@ async function run() {
     if (review.user.type === 'Bot') {
       continue;
     }
-
-    core.info(JSON.stringify(review, null, 4));
 
     reviewers[review.user.id] = review.state;
   }
