@@ -85,7 +85,7 @@ function callWebhook(issueIds, status) {
   const webhooks = {};
   const prefixes = Object.keys(webhookUrls);
   for (const issueId of issueIds) {
-    const matchPrefixes = prefixes.filter((prefix) => prefix === '*' || issueId.startsWith(prefix));
+    const matchPrefixes = prefixes.filter((prefix) => prefix === '*' || issueId.indexOf(prefix) === 0);
     for (const prefix of matchPrefixes) {
       webhooks[prefix] ??= [];
       webhooks[prefix].push(issueId);
