@@ -19,7 +19,7 @@ inputs:
   find-regex-title:
     description: 'Regex to find issue ids in pull request title'
     default: '/([A-Za-z]{2,4}-\\d+)/g'
-  urls:
+  webhook-urls:
     description: 'todo'
     required: true
 runs:

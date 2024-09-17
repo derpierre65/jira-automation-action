@@ -104,7 +104,7 @@ async function run() {
 
   const pullRequestState = pullRequest.state;
 
-  console.log('urls', core.getInput('urls'));
+  console.log('urls', core.getInput('webhook-urls'));
   console.log(JSON.stringify(github.context, null, 4));
 
   const reviewData = await getReviewData(octokit);
