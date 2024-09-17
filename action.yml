@@ -4,9 +4,11 @@ branding:
   icon: 'cloud'
   color: 'blue'
 inputs:
-  test:
-    description: 'test'
-    default: 'In Review'
+  urls:
+    description: 'todo'
+    required: true
+  status:
+    description: 'todo'
     required: true
 runs:
   using: 'node20'
