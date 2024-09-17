@@ -93,6 +93,7 @@ function callWebhook(issueIds, status) {
   }
 
   console.log(`pull request status: ${status}`);
+  console.log(issueIds);
   console.log(issuePrefixUrls);
   console.log(webhooks);
   console.log(JSON.stringify(github.context, null, 4));
