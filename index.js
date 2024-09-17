@@ -17,9 +17,26 @@ async function run() {
     console.log(JSON.stringify(github.context));
 
     const octokit = github.getOctokit(token);
-    const data = await octokit.request(`GET ${context.payload.pull_request.commits_url}`);
 
-    console.log(data);
+    const commitMessages = [];
+    let perPage = 5;
+    let hasMoreCommits = true;
+    let page = 1;
+    while (hasMoreCommits) {
+      core.info(`Fetching commits page ${page}`);
+
+      const { data: commits } = await octokit.request(`GET ${context.payload.pull_request.commits_url}`, {
+        page,
+        per_page: perPage,
+      });
+
+      commits.forEach(commit => commitMessages.push(commit.commit.message));
+
+      hasMoreCommits = commits.length === perPage;
+      page++;
+    }
+
+    core.info(JSON.stringify(commitMessages));
   }
   catch (error) {
     core.setFailed(error.message);
