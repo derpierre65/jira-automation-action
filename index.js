@@ -1,6 +1,12 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
+async function getPullRequestData(octokit) {
+  const {data: pullRequest} = await octokit.request(`GET ${github.context.payload.pull_request.self_url}`);
+
+  return pullRequest;
+}
+
 async function fetchCommitMessages(octokit) {
   const commitMessages = [];
   let hasMoreCommits = true;
@@ -47,7 +53,8 @@ async function run() {
   const commitMessages = await fetchCommitMessages(octokit);
   const issueIds = getIssueIds(commitMessages);
 
-  core.info(`test ${github.context.payload.pull_request.title}`);
+  core.info(`test ${github.context.payload.pull_request.self_url}`);
+  core.info(`test ${github.context.payload.pull_request._links.self.href}`);
   core.info(JSON.stringify(commitMessages));
   core.info(JSON.stringify(issueIds));
 }
