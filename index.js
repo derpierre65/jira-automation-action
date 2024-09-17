@@ -75,16 +75,14 @@ function getIssueIds(messages, prTitle) {
 
 function callWebhook(issueIds, status) {
   const webhookUrls = core.getInput('webhook-urls').split('\n');
-  const issuePrefixUrls = {};
+  const webhookUrlsByPrefix = {};
   for (const url of webhookUrls) {
-    const issuePrefix = url.slice(0, url.indexOf(':'));
-    const webhookUrl = url.slice(url.indexOf(':') + 1);
-
-    issuePrefixUrls[issuePrefix] = webhookUrl;
+    const colonPosition=  url.indexOf(':');
+    webhookUrlsByPrefix[url.slice(0, colonPosition)] = url.slice(colonPosition + 1);
   }
 
   const webhooks = {};
-  const prefixes = Object.keys(webhookUrls);
+  const prefixes = Object.keys(webhookUrlsByPrefix);
   for (const issueId of issueIds) {
     const matchPrefixes = prefixes.filter((prefix) => prefix === '*' || issueId.indexOf(prefix) === 0);
 
@@ -101,7 +99,7 @@ function callWebhook(issueIds, status) {
 
   console.log(`pull request status: ${status}`);
   console.log(issueIds);
-  console.log(issuePrefixUrls);
+  console.log(webhookUrlsByPrefix);
   console.log(webhooks);
   console.log(JSON.stringify(github.context, null, 4));
 }
