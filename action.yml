@@ -4,6 +4,8 @@ branding:
   icon: 'cloud'
   color: 'blue'
 inputs:
+  GITHUB_TOKEN:
+    description: 'Your GitHub token.'
   urls:
     description: 'todo'
     required: true
