@@ -160,7 +160,7 @@ async function run() {
       continue;
     }
 
-    core.debug(JSON.stringify(review, null, 4));
+    core.info(JSON.stringify(review, null, 4));
 
     reviewers++;
     if (review.state === 'APPROVED') {
