@@ -108,6 +108,17 @@ function callWebhook(issueIds, status) {
   }
 }
 
+function notifyPullRequestStatus(issueIds, approved, changesRequested) {
+  if (approved) {
+    return callWebhook(issueIds, PullRequestStatus.APPROVED);
+  }
+
+  return callWebhook(
+    issueIds,
+    changesRequested ? PullRequestStatus.CHANGES_REQUESTED : PullRequestStatus.IN_REVIEW,
+  );
+}
+
 async function run() {
   const token = core.getInput('GITHUB_TOKEN');
   if (!token) {
@@ -149,6 +160,8 @@ async function run() {
       continue;
     }
 
+    core.debug(JSON.stringify(review, null, 4));
+
     reviewers++;
     if (review.state === 'APPROVED') {
       approvals++;
@@ -164,22 +177,13 @@ async function run() {
 
   const approvalThresholdNumber = parseInt(approvalThreshold);
   if (!approvalThreshold.includes('%')) {
-    if (approvals >= approvalThresholdNumber) {
-      return callWebhook(issueIds, PullRequestStatus.APPROVED);
-    }
-
-    return callWebhook(issueIds, changesRequested ? PullRequestStatus.CHANGES_REQUESTED : PullRequestStatus.IN_REVIEW);
+    return notifyPullRequestStatus(issueIds, approvals >= approvalThresholdNumber, changesRequested);
   }
 
   const requestedReviewers = await getRequestedReviewers(octokit);
   reviewers += requestedReviewers.users.filter((user) => user.type === 'User').length;
 
-  const approvalPercent = approvals / reviewers * 100;
-  if (approvalPercent >= approvalThreshold) {
-    return callWebhook(issueIds, PullRequestStatus.APPROVED);
-  }
-
-  return callWebhook(issueIds, PullRequestStatus.IN_REVIEW);
+  return notifyPullRequestStatus(issueIds, approvals / reviewers * 100 >= approvalThreshold, changesRequested);
 }
 
 run().catch(error => core.setFailed(error.message));
