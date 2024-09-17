@@ -13,7 +13,13 @@ const PullRequestStatus = {
 };
 
 async function getReviews(octokit) {
-  const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/reviews`);
+  const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/reviews`, {
+    per_page: 100,
+  });
+
+  if (data.length >= 100) {
+    core.warning('More than 100 reviews were found. The action can only fetch the latest 100 reviews, which may result in an incorrect pull request state.');
+  }
 
   return data;
 }
@@ -108,17 +114,6 @@ function callWebhook(issueIds, status) {
   }
 }
 
-function notifyPullRequestStatus(issueIds, approved, changesRequested) {
-  if (approved) {
-    return callWebhook(issueIds, PullRequestStatus.APPROVED);
-  }
-
-  return callWebhook(
-    issueIds,
-    changesRequested ? PullRequestStatus.CHANGES_REQUESTED : PullRequestStatus.IN_REVIEW,
-  );
-}
-
 async function run() {
   const token = core.getInput('GITHUB_TOKEN');
   if (!token) {
@@ -150,12 +145,13 @@ async function run() {
     return callWebhook(issueIds, PullRequestStatus.DRAFT);
   }
 
-  let reviewers = 0;
+  const reviewers = {};
   let approvals = 0;
   let changesRequested = false;
 
   core.info(JSON.stringify(await getRequestedReviewers(octokit), null, 4));
 
+  // fetch all reviews
   const reviews = await getReviews(octokit);
   for (const review of reviews) {
     if (review.user.type === 'Bot') {
@@ -164,28 +160,42 @@ async function run() {
 
     core.info(JSON.stringify(review, null, 4));
 
-    reviewers++;
-    if (review.state === 'APPROVED') {
-      approvals++;
-    }
-
-    if (review.state === 'CHANGES_REQUESTED') {
-      changesRequested = true;
-      if (forceChangesRequested) {
-        // return callWebhook(issueIds, PullRequestStatus.CHANGES_REQUESTED);
-      }
-    }
+    reviewers[review.user.id] = review.state;
   }
 
-  const approvalThresholdNumber = parseInt(approvalThreshold);
+  const requestedReviewers = (await getRequestedReviewers(octokit)).users.filter((user) => user.type === 'User');
+  for (const reviewer of requestedReviewers) {
+    reviewers[reviewer.id] = 'PENDING';
+  }
+
+  const reviewersStates = Object.values(reviewers);
+  approvals = reviewersStates.filter((state) => state === 'APPROVED').length;
+  changesRequested = reviewersStates.filter((state) => state === 'CHANGES_REQUESTED').length;
+
+  // use changes_requested as state if forceChangesRequested is true, otherwise check the approval threshold
+  if (forceChangesRequested && changesRequested) {
+    return callWebhook(issueIds, PullRequestStatus.CHANGES_REQUESTED);
+  }
+
+  let isApproved;
+
+  // check for number values (e.g. only 1 approval is required)
   if (!approvalThreshold.includes('%')) {
-    return notifyPullRequestStatus(issueIds, approvals >= approvalThresholdNumber, changesRequested);
+    isApproved = approvals >= parseInt(approvalThreshold);
+  }
+  // check for a percent values (e.g. 50% of the reviewers need to approve the request)
+  else {
+    isApproved = approvals / reviewersStates.length * 100 >= approvalThreshold;
   }
 
-  const requestedReviewers = await getRequestedReviewers(octokit);
-  reviewers += requestedReviewers.users.filter((user) => user.type === 'User').length;
+  if (isApproved) {
+    return callWebhook(issueIds, PullRequestStatus.APPROVED);
+  }
 
-  return notifyPullRequestStatus(issueIds, approvals / reviewers * 100 >= approvalThreshold, changesRequested);
+  return callWebhook(
+    issueIds,
+    changesRequested ? PullRequestStatus.CHANGES_REQUESTED : PullRequestStatus.IN_REVIEW,
+  );
 }
 
 run().catch(error => core.setFailed(error.message));
