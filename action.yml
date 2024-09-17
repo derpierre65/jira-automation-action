@@ -1,0 +1,13 @@
+name: 'Jira Automation Webhook'
+description: 'Call a automation webhook if the pull request has a specific status'
+branding:
+  icon: 'cloud'
+  color: 'blue'
+inputs:
+  test:
+    description: 'test'
+    default: 'In Review'
+    required: true
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
