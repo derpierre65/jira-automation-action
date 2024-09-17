@@ -5,6 +5,13 @@ import axios from 'axios';
 let findCommitRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let findTitleRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 
+const PullRequestStatus = {
+  CHANGES_REQUESTED: 'changes_requested',
+  IN_REVIEW: 'in_review',
+  APPROVED: 'approved',
+  DRAFT: 'draft',
+};
+
 async function getPullRequestData(octokit) {
   const {data: pullRequest} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}`);
 
@@ -76,7 +83,7 @@ function callWebhook(issueIds, status) {
   const webhookUrls = core.getInput('webhook-urls').split('\n');
   const webhookUrlsByPrefix = {};
   for (const url of webhookUrls) {
-    const colonPosition=  url.indexOf(':');
+    const colonPosition = url.indexOf(':');
     webhookUrlsByPrefix[url.slice(0, colonPosition)] = url.slice(colonPosition + 1);
   }
 
@@ -92,7 +99,7 @@ function callWebhook(issueIds, status) {
   }
 
   core.info(`pull request status: ${status}`);
-  for ( const key of Object.keys(webhookIssues) ) {
+  for (const key of Object.keys(webhookIssues)) {
     core.info(`call webhook ${key} with issue ids: ${webhookIssues[key].join(', ')}`);
     axios.post(webhookUrlsByPrefix[key], {
       issues: webhookIssues[key],
@@ -114,6 +121,7 @@ async function run() {
   const ignoreTitle = core.getBooleanInput('ignore-title');
   const ignoreCommits = core.getBooleanInput('ignore-commits');
   const approvedThreshold = core.getInput('approved-threshold');
+  const forceChangesRequested = core.getBooleanInput('force-changes-requested');
 
   findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));
   findTitleRegex = loadRegexFromString(core.getInput('find-regex-title'));
@@ -136,11 +144,12 @@ async function run() {
   }
 
   if (github.context.payload.pull_request.draft) {
-    return callWebhook(issueIds, 'draft');
+    return callWebhook(issueIds, PullRequestStatus.DRAFT);
   }
 
   let reviewers = 0;
   let approvals = 0;
+  let changesRequested = false;
 
   const reviews = await getReviews(octokit);
   for (const review of reviews) {
@@ -152,16 +161,22 @@ async function run() {
     if (review.state === 'APPROVED') {
       approvals++;
     }
-    console.log(review.state);
+
+    if (review.state === 'CHANGES_REQUESTED') {
+      changesRequested = true;
+      if (forceChangesRequested) {
+        return callWebhook(issueIds, PullRequestStatus.CHANGES_REQUESTED);
+      }
+    }
   }
 
   const requiredApprovals = parseInt(approvedThreshold);
   if (!approvedThreshold.includes('%')) {
     if (approvals >= requiredApprovals) {
-      return callWebhook(issueIds, 'approved');
+      return callWebhook(issueIds, PullRequestStatus.APPROVED);
     }
 
-    return callWebhook(issueIds, 'in_review');
+    return callWebhook(issueIds, changesRequested ? PullRequestStatus.CHANGES_REQUESTED : PullRequestStatus.IN_REVIEW);
   }
 
   const requestedReviewers = await getRequestedReviewers(octokit);
@@ -169,10 +184,10 @@ async function run() {
 
   const approvalPercent = approvals / reviewers * 100;
   if (approvalPercent >= approvedThreshold) {
-    return callWebhook(issueIds, 'approved');
+    return callWebhook(issueIds, PullRequestStatus.APPROVED);
   }
 
-  return callWebhook(issueIds, 'in_review');
+  return callWebhook(issueIds, PullRequestStatus.IN_REVIEW);
 }
 
 run().catch(error => core.setFailed(error.message));
