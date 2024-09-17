@@ -12,6 +12,11 @@ async function getReviewData(octokit) {
 
   return data;
 }
+async function getRequestedReviewers(octokit) {
+  const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/requested_reviewers`);
+
+  return data;
+}
 
 async function fetchCommitMessages(octokit) {
   const commitMessages = [];
@@ -74,6 +79,9 @@ async function run() {
 
   const reviewData = await getReviewData(octokit);
   console.log(JSON.stringify(reviewData, null, 4));
+
+  const reviewers = await getRequestedReviewers(octokit);
+  console.log(JSON.stringify(reviewers, null, 4));
 }
 
 run().catch(error => core.setFailed(error.message));
