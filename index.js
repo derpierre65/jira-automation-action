@@ -72,8 +72,15 @@ function getIssueIds(messages, prTitle) {
 }
 
 function callWebhook(issueIds, status) {
+  const webhookUrls = core.getInput('webhook-urls').split('\n');
+  const issuePrefixUrls = {};
+  for (const url of webhookUrls) {
+    const issuePrefix = url.slice(0, url.indexOf(':'));
+    const webhookUrl = url.slice(url.indexOf(':'));
+    issuePrefixUrls[issuePrefix] = webhookUrl;
+  }
   console.log(`pull request status: ${status}`);
-  console.log('webhook-urls', core.getInput('webhook-urls'));
+  console.log(issuePrefixUrls);
   console.log(JSON.stringify(github.context, null, 4));
 }
 
