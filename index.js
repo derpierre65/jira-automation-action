@@ -152,6 +152,7 @@ async function run() {
     if (review.state === 'APPROVED') {
       approvals++;
     }
+    console.log(review.state);
   }
 
   const requiredApprovals = parseInt(approvedThreshold);
