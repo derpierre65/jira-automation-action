@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-function run() {
+async function run() {
   try {
     const token = core.getInput('GITHUB_TOKEN');
     if (!token) {
@@ -12,10 +12,12 @@ function run() {
     // /([A-Za-z]{2,4}-\d+)/g
 
     console.log('urls', core.getInput('urls'));
-    console.log(process.env.GITHUB_TOKEN);
     console.log(JSON.stringify(github.context));
 
-    console.log(github.getOctokit(token));
+    const octokit = github.getOctokit(token);
+    const data = await octokit.request(`GET ${context.payload.pull_request.commits_url}`);
+
+    console.log(data);
   }
   catch (error) {
     core.setFailed(error.message);
