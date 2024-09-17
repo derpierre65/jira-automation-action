@@ -79,8 +79,8 @@ async function run() {
   }
 
   // load settings
-  const ignoreTitle = core.getBooleanInput('ignore_title');
-  const ignoreCommits = core.getBooleanInput('ignore_commits');
+  const ignoreTitle = core.getBooleanInput('ignore-title');
+  const ignoreCommits = core.getBooleanInput('ignore-commits');
 
   findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));
   findTitleRegex = loadRegexFromString(core.getInput('find-regex-title'));
