@@ -7,6 +7,12 @@ async function getPullRequestData(octokit) {
   return pullRequest;
 }
 
+async function getReviewData(octokit) {
+  const {data} = await octokit.request(`GET ${github.context.payload.pull_request._links.self.href}/reviews`);
+
+  return data;
+}
+
 async function fetchCommitMessages(octokit) {
   const commitMessages = [];
   let hasMoreCommits = true;
@@ -46,17 +52,28 @@ async function run() {
     return;
   }
 
-  console.log('urls', core.getInput('urls'));
-  console.log(JSON.stringify(github.context, null, 4));
-
   const octokit = github.getOctokit(token);
   const commitMessages = await fetchCommitMessages(octokit);
   const pullRequest = await getPullRequestData(octokit);
-  const issueIds = getIssueIds(commitMessages);
 
-  core.info(JSON.stringify(commitMessages));
-  core.info(JSON.stringify(issueIds));
-  core.info(JSON.stringify(pullRequest));
+  // add pull request to commit messages to fetch the issue ids from title
+  commitMessages.push(pullRequest.title);
+
+  // get all issue ids in commit message and pull request title
+  const issueIds = getIssueIds(commitMessages);
+  if (!issueIds.length) {
+    // do nothing, no issue ids found.
+    return;
+  }
+
+  const pullRequestState = pullRequest.state;
+
+
+  console.log('urls', core.getInput('urls'));
+  console.log(JSON.stringify(github.context, null, 4));
+
+  const reviewData = await getReviewData(octokit);
+  console.log(JSON.stringify(reviewData, null, 4));
 }
 
 run().catch(error => core.setFailed(error.message));
