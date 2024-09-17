@@ -19,7 +19,7 @@ inputs:
   find-regex-title:
     description: 'Regex to find issue ids in pull request title'
     default: '/([A-Za-z]{2,4}-\d+)/g'
-  approved-threshold:
+  approval-threshold:
     description: 'Approvals required (in percent (50%) or as a number (2)) before a pull requests state is "approved"'
     default: '1'
   force-changes-requested:

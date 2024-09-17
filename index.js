@@ -114,7 +114,7 @@ async function run() {
   // load settings
   const ignoreTitle = core.getBooleanInput('ignore-title');
   const ignoreCommits = core.getBooleanInput('ignore-commits');
-  const approvedThreshold = core.getInput('approved-threshold');
+  const approvalThreshold = core.getInput('approval-threshold');
   const forceChangesRequested = core.getBooleanInput('force-changes-requested');
 
   findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));
@@ -158,9 +158,9 @@ async function run() {
     }
   }
 
-  const requiredApprovals = parseInt(approvedThreshold);
-  if (!approvedThreshold.includes('%')) {
-    if (approvals >= requiredApprovals) {
+  const approvalThresholdNumber = parseInt(approvalThreshold);
+  if (!approvalThreshold.includes('%')) {
+    if (approvals >= approvalThresholdNumber) {
       return callWebhook(issueIds, PullRequestStatus.APPROVED);
     }
 
@@ -171,7 +171,7 @@ async function run() {
   reviewers += requestedReviewers.users.filter((user) => user.type === 'User').length;
 
   const approvalPercent = approvals / reviewers * 100;
-  if (approvalPercent >= approvedThreshold) {
+  if (approvalPercent >= approvalThreshold) {
     return callWebhook(issueIds, PullRequestStatus.APPROVED);
   }
 
