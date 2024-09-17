@@ -5,6 +5,10 @@ import axios from 'axios';
 let findCommitRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let findTitleRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let octokit = null;
+let ignoreTitle = false;
+let ignoreCommits = false;
+let approvalThreshold = 1;
+let forceChangesRequested = false;
 
 const PullRequestStatus = {
   CHANGES_REQUESTED: 'changes_requested',
@@ -40,7 +44,7 @@ async function getPullRequests(owner, repository) {
   return data;
 }
 
-async function fetchCommitMessages() {
+async function fetchCommitMessages(owner, repository, id) {
   const commitMessages = [];
   let hasMoreCommits = true;
   let perPage = 100;
@@ -49,7 +53,7 @@ async function fetchCommitMessages() {
   while (hasMoreCommits) {
     core.info(`Fetching commits page ${page}`);
 
-    const {data: commits} = await octokit.request(`GET ${github.context.payload.pull_request.commits_url}`, {
+    const {data: commits} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/commits`, {
       page,
       per_page: perPage,
     });
@@ -124,27 +128,9 @@ function callWebhook(issueIds, status) {
   }
 }
 
-async function run() {
-  const token = core.getInput('GITHUB_TOKEN');
-  if (!token) {
-    core.setFailed('GITHUB_TOKEN is required');
-    return;
-  }
-
-  // load settings
-  const ignoreTitle = core.getBooleanInput('ignore-title');
-  const ignoreCommits = core.getBooleanInput('ignore-commits');
-  const approvalThreshold = core.getInput('approval-threshold');
-  const forceChangesRequested = core.getBooleanInput('force-changes-requested');
-
-  findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));
-  findTitleRegex = loadRegexFromString(core.getInput('find-regex-title'));
-
-  octokit = github.getOctokit(token);
-  const commitMessages = ignoreCommits ? [] : await fetchCommitMessages();
-  const pullRequestTitle = ignoreTitle ? '' : github.context.payload.pull_request.title;
-  const ownerName = github.context.payload.pull_request.base.repo.owner.login;
-  const repository = github.context.payload.pull_request.base.repo.name;
+async function fetchPullRequestStatus(owner, repository, pullRequest) {
+  const commitMessages = ignoreCommits ? [] : await fetchCommitMessages(owner, repository, pullRequest.number);
+  const pullRequestTitle = ignoreTitle ? '' : pullRequest.title;
 
   // get all issue ids in commit message and pull request title
   const issueIds = getIssueIds(commitMessages, pullRequestTitle);
@@ -153,21 +139,18 @@ async function run() {
     return;
   }
 
-  core.info(`payload ${JSON.stringify(github.context.payload.pull_request, null, 4)}`);
-  // core.info(JSON.stringify(await getPullRequests()));
-
-  if (github.context.payload.pull_request.merged) {
+  if (pullRequest.merged) {
     return callWebhook(issueIds, PullRequestStatus.MERGED);
   }
 
-  if (github.context.payload.pull_request.draft) {
+  if (pullRequest.draft) {
     return callWebhook(issueIds, PullRequestStatus.DRAFT);
   }
 
   const reviewers = {};
 
   // fetch all reviews
-  const reviews = await getReviews(ownerName, repository, github.context.payload.pull_request.number);
+  const reviews = await getReviews(owner, repository, pullRequest.number);
   for (const review of reviews) {
     if (review.user.type === 'Bot') {
       continue;
@@ -176,7 +159,7 @@ async function run() {
     reviewers[review.user.id] = review.state;
   }
 
-  const requestedReviewers = (await getRequestedReviewers(ownerName, repository)).users.filter((user) => user.type === 'User');
+  const requestedReviewers = (await getRequestedReviewers(owner, repository)).users.filter((user) => user.type === 'User');
   for (const reviewer of requestedReviewers) {
     reviewers[reviewer.id] = 'PENDING';
   }
@@ -187,7 +170,10 @@ async function run() {
 
   // use changes_requested as state if forceChangesRequested is true, otherwise check the approval threshold
   if (forceChangesRequested && changesRequested) {
-    return callWebhook(issueIds, PullRequestStatus.CHANGES_REQUESTED);
+    return {
+      issueIds,
+      status: PullRequestStatus.CHANGES_REQUESTED,
+    };
   }
 
   let isApproved;
@@ -202,13 +188,41 @@ async function run() {
   }
 
   if (isApproved) {
-    return callWebhook(issueIds, PullRequestStatus.APPROVED);
+    return {
+      issueIds,
+      status: PullRequestStatus.APPROVED,
+    };
   }
 
-  return callWebhook(
+  return {
     issueIds,
-    changesRequested ? PullRequestStatus.CHANGES_REQUESTED : PullRequestStatus.IN_REVIEW,
-  );
+    status: changesRequested ? PullRequestStatus.CHANGES_REQUESTED : PullRequestStatus.IN_REVIEW,
+  };
+}
+
+async function run() {
+  const token = core.getInput('GITHUB_TOKEN');
+  if (!token) {
+    core.setFailed('GITHUB_TOKEN is required');
+    return;
+  }
+
+  // load settings
+  ignoreTitle = core.getBooleanInput('ignore-title');
+  ignoreCommits = core.getBooleanInput('ignore-commits');
+  approvalThreshold = core.getInput('approval-threshold');
+  forceChangesRequested = core.getBooleanInput('force-changes-requested');
+  findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));
+  findTitleRegex = loadRegexFromString(core.getInput('find-regex-title'));
+  octokit = github.getOctokit(token);
+
+  const ownerName = github.context.payload.pull_request.base.repo.owner.login;
+  const repository = github.context.payload.pull_request.base.repo.name;
+  const result = await fetchPullRequestStatus(ownerName, repository, github.context.payload.pull_request);
+
+  console.log(result);
+
+  callWebhook(result.issueIds, result.status);
 }
 
 run().catch(error => core.setFailed(error.message));
