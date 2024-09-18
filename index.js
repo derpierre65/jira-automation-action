@@ -244,11 +244,7 @@ async function run() {
   const prLimit = parseInt(core.getInput('additional-repositories-pull-request-limit'));
 
   for (const issueId of result.issueIds) {
-    if (issueStatus[issueId]) {
-      issueStatus[issueId] = Math.min(issueStatus[issueId], pullRequestStatusPriority[result.status]);
-    } else {
-      issueStatus[issueId] = pullRequestStatusPriority[result.status];
-    }
+    issueStatus[issueId] = pullRequestStatusPriority[result.status];
   }
 
   for (const additionalRepository of additionalRepositories) {
@@ -256,10 +252,24 @@ async function run() {
     const pullRequests = await getPullRequests(owner, repository, prLimit);
 
     for (const pullRequest of pullRequests) {
+      let pullRequestState = null;
       console.log(pullRequest.title);
       const issueIds = getIssueIds([], pullRequest.title);
       console.log(issueIds);
+      for (const id of issueIds) {
+        if (issueStatus[id]) {
+          console.log(`found pull request with issue id ${id} | fetch pull request`)
+          if (!pullRequestState) {
+            ({status: pullRequestState} = await fetchPullRequestStatus(owner, repository, pullRequest));
+            console.log(`state: ${pullRequestState}`);
+          }
+
+          issueStatus[id] = Math.min(issueStatus[id], pullRequestStatusPriority[pullRequestState]);
+        }
+      }
     }
+
+    console.log(issueStatus);
 
     // for (const pr of limitedPullRequests) {
     //   const prResult = await fetchPullRequestStatus(owner, repository, pr);
