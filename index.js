@@ -17,6 +17,13 @@ const PullRequestStatus = {
   DRAFT: 'draft',
   MERGED: 'merged',
 };
+const pullRequestStatusPriority = {
+  [PullRequestStatus.DRAFT]: 1,
+  [PullRequestStatus.CHANGES_REQUESTED]: 2,
+  [PullRequestStatus.IN_REVIEW]: 3,
+  [PullRequestStatus.APPROVED]: 4,
+  [PullRequestStatus.MERGED]: 5,
+};
 
 async function getReviews(owner, repository, id) {
   const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/reviews`, {
@@ -36,9 +43,9 @@ async function getRequestedReviewers(owner, repository) {
   return data;
 }
 
-async function getPullRequests(owner, repository) {
+async function getPullRequests(owner, repository, perPage = 100) {
   const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls`, {
-    per_page: 100,
+    per_page: Math.min(perPage, 100),
   });
 
   return data;
@@ -200,6 +207,8 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
   };
 }
 
+const issueStatus = {};
+
 async function run() {
   const token = core.getInput('GITHUB_TOKEN');
   if (!token) {
@@ -220,7 +229,42 @@ async function run() {
   const repository = github.context.payload.pull_request.base.repo.name;
   const result = await fetchPullRequestStatus(ownerName, repository, github.context.payload.pull_request);
 
-  console.log(result);
+  const additionalRepositories = core.getInput('additional-repositories').split(',').map((repo) => repo.trim());
+  if (!additionalRepositories) {
+    return callWebhook(result.issueIds, result.status)
+  }
+
+  const prLimit = parseInt(core.getInput('additional-repositories-pull-request-limit'));
+
+  for (const issueId of result.issueIds) {
+    if (issueStatus[issueId]) {
+      issueStatus[issueId] = Math.min(issueStatus[issueId], pullRequestStatusPriority[result.status]);
+    } else {
+      issueStatus[issueId] = pullRequestStatusPriority[result.status];
+    }
+  }
+
+  for (const additionalRepository of additionalRepositories) {
+    const [owner, repository] = additionalRepository.split('/');
+    const pullRequests = await getPullRequests(owner, repository, prLimit);
+
+    for (const pullRequest of pullRequests) {
+      console.log(pullRequest.title);
+      const issueIds = getIssueIds([], pullRequest.title);
+      console.log(issueIds);
+    }
+
+    // for (const pr of limitedPullRequests) {
+    //   const prResult = await fetchPullRequestStatus(owner, repository, pr);
+    //   for (const issueId of prResult.issueIds) {
+    //     if (issueStatus[issueId]) {
+    //       issueStatus[issueId] = Math.min(issueStatus[issueId], pullRequestStatusPriority[prResult.status]);
+    //     } else {
+    //       issueStatus[issueId] = pullRequestStatusPriority[prResult.status];
+    //     }
+    //   }
+    // }
+  }
 
   callWebhook(result.issueIds, result.status);
 }

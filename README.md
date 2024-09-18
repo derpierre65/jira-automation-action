@@ -51,6 +51,16 @@ BAR:https://webhook-for-bar.com
 *:https://webhook-for-all.com
 ```
 
+### `additional-reposotires`
+
+**Optional** List of additional repositories to check for the latest pull request titles containing JIRA IDs. Separate multiple repository names with commas (owner/repository-name).  
+**Default**: `''`
+
+### `additional-repositories-pull-request-limit`
+
+**Optional** Number of pull requests to check in the additional repositories (1-100).  
+**Default**: `100`
+
 ## Example Usage
 
 ```yaml
@@ -73,4 +83,6 @@ jobs:
           find-regex-title: '/([A-Za-z]{2,4}-\d+)/g'
           approval-threshold: '1'
           force-changes-requested: 'true'
+          additional-repos: 'derpierre65/jira-automation-action,derpierre65/action-test'
+          additional-repositories-pull-request-limit: '50'
 ```

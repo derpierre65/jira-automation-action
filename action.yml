@@ -25,6 +25,12 @@ inputs:
   force-changes-requested:
     description: 'If true, the pull request status is changes_requested regardless of whether the approval_threshold is reached.'
     default: 'true'
+  additional-repositories:
+    description: 'List of additional repositories to check for the latest pull request titles containing JIRA IDs. Separate multiple repository names with commas.'
+    default: ''
+  additional-repositories-pull-request-limit:
+    description: 'Number of pull requests to check in the additional repositories (1-100).'
+    default: '100'
   webhook-urls:
     description: 'todo'
     required: true
