@@ -26,7 +26,9 @@ const pullRequestStatusPriority = {
 };
 
 async function getReviews(owner, repository, id) {
-  const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/reviews`, {
+  const url = `GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/reviews`;
+  core.info(url);
+  const {data} = await octokit.request(url, {
     per_page: 100,
   });
 
@@ -38,13 +40,17 @@ async function getReviews(owner, repository, id) {
 }
 
 async function getRequestedReviewers(owner, repository) {
-  const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/requested_reviewers`);
+  let url = `GET https://api.github.com/repos/${owner}/${repository}/requested_reviewers`;
+  core.info(url);
+  const {data} = await octokit.request(url);
 
   return data;
 }
 
 async function getPullRequests(owner, repository, perPage = 100) {
-  const {data} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls`, {
+  const url = `GET https://api.github.com/repos/${owner}/${repository}/pulls`;
+  core.info(url);
+  const {data} = await octokit.request(url, {
     per_page: Math.min(perPage, 100),
   });
 
@@ -58,9 +64,9 @@ async function fetchCommitMessages(owner, repository, id) {
   let page = 1;
 
   while (hasMoreCommits) {
-    core.info(`Fetching commits page ${page}`);
-
-    const {data: commits} = await octokit.request(`GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/commits`, {
+    const url = `GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/commits`;
+    core.info(url);
+    const {data: commits} = await octokit.request(url, {
       page,
       per_page: perPage,
     });
@@ -230,9 +236,10 @@ async function run() {
   const result = await fetchPullRequestStatus(ownerName, repository, github.context.payload.pull_request);
 
   const additionalRepositories = core.getInput('additional-repositories').split(',').map((repo) => repo.trim());
-  if (!additionalRepositories) {
+  if (!additionalRepositories.length) {
     return callWebhook(result.issueIds, result.status)
   }
+  console.log('additionalRepositories', additionalRepositories);
 
   const prLimit = parseInt(core.getInput('additional-repositories-pull-request-limit'));
 
