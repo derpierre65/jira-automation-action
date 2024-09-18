@@ -34,7 +34,7 @@ const statusByPriority = {
 
 async function getReviews(owner, repository, id) {
   const url = `GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/reviews`;
-  core.info(url);
+  core.debug(url);
   const {data} = await octokit.request(url, {
     per_page: 100,
   });
@@ -48,7 +48,7 @@ async function getReviews(owner, repository, id) {
 
 async function getRequestedReviewers(owner, repository, id) {
   let url = `GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/requested_reviewers`;
-  core.info(url);
+  core.debug(url);
   const {data} = await octokit.request(url);
 
   return data;
@@ -56,7 +56,7 @@ async function getRequestedReviewers(owner, repository, id) {
 
 async function getPullRequests(owner, repository, perPage = 100) {
   const url = `GET https://api.github.com/repos/${owner}/${repository}/pulls`;
-  core.info(url);
+  core.debug(url);
   const {data} = await octokit.request(url, {
     per_page: Math.min(perPage, 100),
   });
@@ -72,7 +72,7 @@ async function fetchCommitMessages(owner, repository, id) {
 
   while (hasMoreCommits) {
     const url = `GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/commits`;
-    core.info(url);
+    core.debug(url);
     const {data: commits} = await octokit.request(url, {
       page,
       per_page: perPage,
@@ -132,9 +132,9 @@ function callWebhook(issueIds, status) {
     }
   }
 
-  core.info(`Pull request status: ${status}`);
+  core.debug(`Pull request status: ${status}`);
   for (const key of Object.keys(webhookIssues)) {
-    core.info(`Call webhook ${key} with issue ids: ${webhookIssues[key].join(', ')}`);
+    core.debug(`Call webhook ${key} with issue ids: ${webhookIssues[key].join(', ')} and status ${status}`);
     axios.post(webhookUrlsByPrefix[key], {
       issues: webhookIssues[key],
       pullRequest: {
@@ -246,7 +246,6 @@ async function run() {
   if (!additionalRepositories.length) {
     return callWebhook(result.issueIds, result.status)
   }
-  console.log('additionalRepositories', additionalRepositories);
 
   const prLimit = parseInt(core.getInput('additional-repositories-pull-request-limit'));
 
@@ -260,15 +259,13 @@ async function run() {
 
     for (const pullRequest of pullRequests) {
       let pullRequestState = null;
-      console.log(pullRequest.title);
       const issueIds = getIssueIds([], pullRequest.title);
-      console.log(issueIds);
       for (const id of issueIds) {
         if (issueStatus[id]) {
-          console.log(`found pull request with issue id ${id} | fetch pull request`)
+          core.debug(`${additionalRepository} found pull request with issue id ${id} | fetch pull request`)
           if (!pullRequestState) {
             ({status: pullRequestState} = await fetchPullRequestStatus(owner, repository, pullRequest));
-            console.log(`state: ${pullRequestState}`);
+            core.debug(`${additionalRepository} pull request ${id} state: ${pullRequestState}`);
           }
 
           issueStatus[id] = Math.min(issueStatus[id], pullRequestStatusPriority[pullRequestState]);
