@@ -24,6 +24,13 @@ const pullRequestStatusPriority = {
   [PullRequestStatus.APPROVED]: 4,
   [PullRequestStatus.MERGED]: 5,
 };
+const statusByPriority = {
+  1: PullRequestStatus.DRAFT,
+  2: PullRequestStatus.CHANGES_REQUESTED,
+  3: PullRequestStatus.IN_REVIEW,
+  4: PullRequestStatus.APPROVED,
+  5: PullRequestStatus.MERGED,
+};
 
 async function getReviews(owner, repository, id) {
   const url = `GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/reviews`;
@@ -268,22 +275,21 @@ async function run() {
         }
       }
     }
-
-    console.log(issueStatus);
-
-    // for (const pr of limitedPullRequests) {
-    //   const prResult = await fetchPullRequestStatus(owner, repository, pr);
-    //   for (const issueId of prResult.issueIds) {
-    //     if (issueStatus[issueId]) {
-    //       issueStatus[issueId] = Math.min(issueStatus[issueId], pullRequestStatusPriority[prResult.status]);
-    //     } else {
-    //       issueStatus[issueId] = pullRequestStatusPriority[prResult.status];
-    //     }
-    //   }
-    // }
   }
 
-  callWebhook(result.issueIds, result.status);
+  const groupByStatus = {};
+  for ( const issueId of Object.keys(issueStatus) ) {
+    const status = issueStatus[issueId];
+
+    groupByStatus[status] ??= [];
+    groupByStatus[status].push(issueId);
+  }
+
+  for ( const status of Object.keys(groupByStatus) ) {
+    const statusAsName = statusByPriority[status];
+
+    callWebhook(groupByStatus[status], statusAsName);
+  }
 }
 
 run().catch(error => core.setFailed(error.message));
