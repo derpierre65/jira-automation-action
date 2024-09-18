@@ -39,8 +39,8 @@ async function getReviews(owner, repository, id) {
   return data;
 }
 
-async function getRequestedReviewers(owner, repository) {
-  let url = `GET https://api.github.com/repos/${owner}/${repository}/requested_reviewers`;
+async function getRequestedReviewers(owner, repository, id) {
+  let url = `GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/requested_reviewers`;
   core.info(url);
   const {data} = await octokit.request(url);
 
@@ -172,7 +172,7 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
     reviewers[review.user.id] = review.state;
   }
 
-  const requestedReviewers = (await getRequestedReviewers(owner, repository)).users.filter((user) => user.type === 'User');
+  const requestedReviewers = (await getRequestedReviewers(owner, repository, pullRequest.number)).users.filter((user) => user.type === 'User');
   for (const reviewer of requestedReviewers) {
     reviewers[reviewer.id] = 'PENDING';
   }
