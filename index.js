@@ -244,8 +244,11 @@ async function run() {
 
   const additionalRepositories = core.getInput('additional-repositories').split(',').map((repo) => repo.trim());
   if (!additionalRepositories.length) {
+    core.debug('No additional repositories found, use current pull request for webhook.');
     return callWebhook(result.issueIds, result.status)
   }
+
+  core.debug('Check additional repositories');
 
   const prLimit = parseInt(core.getInput('additional-repositories-pull-request-limit'));
 
@@ -254,6 +257,7 @@ async function run() {
   }
 
   for (const additionalRepository of additionalRepositories) {
+    core.debug(`Check additional repository ${additionalRepository}`);
     const [owner, repository] = additionalRepository.split('/');
     const pullRequests = await getPullRequests(owner, repository, prLimit);
 
@@ -275,14 +279,14 @@ async function run() {
   }
 
   const groupByStatus = {};
-  for ( const issueId of Object.keys(issueStatus) ) {
+  for (const issueId of Object.keys(issueStatus)) {
     const status = issueStatus[issueId];
 
     groupByStatus[status] ??= [];
     groupByStatus[status].push(issueId);
   }
 
-  for ( const status of Object.keys(groupByStatus) ) {
+  for (const status of Object.keys(groupByStatus)) {
     const statusAsName = statusByPriority[status];
 
     callWebhook(groupByStatus[status], statusAsName);
