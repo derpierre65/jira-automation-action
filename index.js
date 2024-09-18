@@ -156,7 +156,9 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
   const issueIds = getIssueIds(commitMessages, pullRequestTitle);
   if (!issueIds.length) {
     // do nothing, no issue ids found.
-    return;
+    return {
+      status: null,
+    };
   }
 
   if (pullRequest.merged) {
@@ -241,6 +243,10 @@ async function run() {
   const ownerName = github.context.payload.pull_request.base.repo.owner.login;
   const repository = github.context.payload.pull_request.base.repo.name;
   const result = await fetchPullRequestStatus(ownerName, repository, github.context.payload.pull_request);
+  if (result.status === null) {
+    core.debug('No jira issue ids found, skip action');
+    return;
+  }
 
   const additionalRepositories = core.getInput('additional-repositories').split(',').map((repo) => repo.trim());
   if (!additionalRepositories.length) {
@@ -256,23 +262,31 @@ async function run() {
     issueStatus[issueId] = pullRequestStatusPriority[result.status];
   }
 
+  const additionalPullStatuses = {};
   for (const additionalRepository of additionalRepositories) {
     core.debug(`Check additional repository ${additionalRepository}`);
     const [owner, repository] = additionalRepository.split('/');
     const pullRequests = await getPullRequests(owner, repository, prLimit);
 
     for (const pullRequest of pullRequests) {
-      let pullRequestState = null;
       const issueIds = getIssueIds([], pullRequest.title);
       for (const id of issueIds) {
         if (issueStatus[id]) {
-          core.debug(`${additionalRepository} found pull request with issue id ${id} | fetch pull request`)
-          if (!pullRequestState) {
-            ({status: pullRequestState} = await fetchPullRequestStatus(owner, repository, pullRequest));
-            core.debug(`${additionalRepository} pull request ${id} state: ${pullRequestState}`);
+          const pullIdentifier = additionalRepository + id;
+
+          core.debug(`${additionalRepository} found pull request with issue id ${id}, fetch pull request status ${pullIdentifier}`)
+
+          if (typeof additionalPullStatuses[pullIdentifier] === 'undefined') {
+            additionalPullStatuses[pullIdentifier] = (await fetchPullRequestStatus(owner, repository, pullRequest)).status;
+
+            core.debug(`${additionalRepository} pull request ${id} state: ${additionalPullStatuses[pullIdentifier]}`);
           }
 
-          issueStatus[id] = Math.min(issueStatus[id], pullRequestStatusPriority[pullRequestState]);
+          if (!additionalPullStatuses[pullIdentifier]) {
+            continue;
+          }
+
+          issueStatus[id] = Math.min(issueStatus[id], pullRequestStatusPriority[additionalPullStatuses[pullIdentifier]]);
         }
       }
     }
