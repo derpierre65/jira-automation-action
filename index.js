@@ -133,6 +133,7 @@ function callWebhook(issueIds, status) {
   }
 
   core.debug(`Pull request status: ${status}`);
+
   for (const key of Object.keys(webhookIssues)) {
     core.debug(`Call webhook ${key} with issue ids: ${webhookIssues[key].join(', ')} and status ${status}`);
     axios.post(webhookUrlsByPrefix[key], {
@@ -162,11 +163,17 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
   }
 
   if (pullRequest.merged) {
-    return callWebhook(issueIds, PullRequestStatus.MERGED);
+    return {
+      issueIds,
+      status: PullRequestStatus.MERGED,
+    };
   }
 
   if (pullRequest.draft) {
-    return callWebhook(issueIds, PullRequestStatus.DRAFT);
+    return {
+      issueIds,
+      status: PullRequestStatus.DRAFT,
+    };
   }
 
   const reviewers = {};
