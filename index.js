@@ -190,7 +190,9 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
 
   const requestedReviewers = (await getRequestedReviewers(owner, repository, pullRequest.number)).users.filter((user) => user.type === 'User');
   for (const reviewer of requestedReviewers) {
-    reviewers[reviewer.id] = 'PENDING';
+    if (!reviewers[reviewer.id] || reviewers[reviewer.id] !== 'CHANGES_REQUESTED') {
+      reviewers[reviewer.id] = 'PENDING';
+    }
   }
 
   const reviewersStates = Object.values(reviewers);
