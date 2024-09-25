@@ -189,9 +189,16 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
   }
 
   const requestedReviewers = (await getRequestedReviewers(owner, repository, pullRequest.number)).users.filter((user) => user.type === 'User');
+  let forcePending = false;
   for (const reviewer of requestedReviewers) {
-    if (!reviewers[reviewer.id] || reviewers[reviewer.id] !== 'CHANGES_REQUESTED') {
-      reviewers[reviewer.id] = 'PENDING';
+    if (!reviewers[reviewer.id]) {
+      if (reviewers[reviewer.id] !== 'CHANGES_REQUESTED') {
+        reviewers[reviewer.id] = 'PENDING';
+      }
+      // Require user's approval for requested changes.
+      else {
+        forcePending = true;
+      }
     }
   }
 
@@ -204,6 +211,13 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
     return {
       issueIds,
       status: PullRequestStatus.CHANGES_REQUESTED,
+    };
+  }
+
+  if (forcePending) {
+    return {
+      issueIds,
+      status: PullRequestStatus.IN_REVIEW,
     };
   }
 
