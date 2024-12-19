@@ -8,7 +8,6 @@ let octokit = null;
 let ignoreTitle = false;
 let ignoreCommits = false;
 let approvalThreshold = 1;
-let forceChangesRequested = false;
 
 const PullRequestStatus = {
   CHANGES_REQUESTED: 'changes_requested',
@@ -153,6 +152,10 @@ function callWebhook(issueIds, status) {
   }
 }
 
+function hasStatus(reviewers, status) {
+  return reviewers.some((state) => state === status)
+}
+
 async function fetchPullRequestStatus(owner, repository, pullRequest) {
   const commitMessages = ignoreCommits ? [] : await fetchCommitMessages(owner, repository, pullRequest.number);
   const pullRequestTitle = ignoreTitle ? '' : pullRequest.title;
@@ -199,33 +202,28 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
     reviewers[review.user.id] = review.state;
   }
 
+  core.info('reviewers 1:' + JSON.stringify(reviewers, null, 2));
+
   const requestedReviewers = (await getRequestedReviewers(owner, repository, pullRequest.number)).users.filter((user) => user.type === 'User');
-  let forcePending = false;
+  let hasRequestedChanges = hasStatus(Object.values(reviewers), 'CHANGES_REQUESTED');
   for (const reviewer of requestedReviewers) {
-    if (!reviewers[reviewer.id]) {
-      if (reviewers[reviewer.id] !== 'CHANGES_REQUESTED') {
-        reviewers[reviewer.id] = 'PENDING';
-      }
-      // Require user's approval for requested changes.
-      else {
-        forcePending = true;
-      }
-    }
+    reviewers[reviewer.id] = 'PENDING';
   }
+
+  core.info(`reviewers 2 (hasRequestedChanges: ${hasRequestedChanges}):` + JSON.stringify(reviewers, null, 2));
 
   const reviewersStates = Object.values(reviewers);
   const approvals = reviewersStates.filter((state) => state === 'APPROVED').length;
   const changesRequested = reviewersStates.filter((state) => state === 'CHANGES_REQUESTED').length;
 
-  // use changes_requested as state if forceChangesRequested is true, otherwise check the approval threshold
-  if (forceChangesRequested && changesRequested) {
+  if (changesRequested) {
     return {
       issueIds,
       status: PullRequestStatus.CHANGES_REQUESTED,
     };
   }
 
-  if (forcePending) {
+  if (hasRequestedChanges) {
     return {
       issueIds,
       status: PullRequestStatus.IN_REVIEW,
@@ -269,7 +267,6 @@ async function run() {
   ignoreTitle = core.getBooleanInput('ignore-title');
   ignoreCommits = core.getBooleanInput('ignore-commits');
   approvalThreshold = core.getInput('approval-threshold');
-  forceChangesRequested = core.getBooleanInput('force-changes-requested');
   findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));
   findTitleRegex = loadRegexFromString(core.getInput('find-regex-title'));
   octokit = github.getOctokit(token);

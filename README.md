@@ -34,11 +34,6 @@ The provided data can be used with `webhookData.pullRequest.FIELD` in JIRA autom
 **Optional** Approvals required (in percent (50%) or as a number (2)) before a pull request's state is "approved".  
 **Default**: `1`
 
-### `force-changes-requested`
-
-**Optional** If true, the pull request status is `changes_requested` regardless of whether the `approval_threshold` is reached.  
-**Default**: `true`
-
 ### `webhook-urls`
 
 **Required** The JIRA webhook URLs to be called. The URL is split by the project task alias with a colon. Use a newline for multiple project aliases, and `*` for every project alias.
@@ -82,7 +77,6 @@ jobs:
           find-regex-commits: '/([A-Za-z]{2,4}-\d+)/g'
           find-regex-title: '/([A-Za-z]{2,4}-\d+)/g'
           approval-threshold: '1'
-          force-changes-requested: 'true'
           additional-repos: 'derpierre65/jira-automation-action,derpierre65/action-test'
           additional-repositories-pull-request-limit: '50'
 ```

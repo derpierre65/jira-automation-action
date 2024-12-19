@@ -22,9 +22,6 @@ inputs:
   approval-threshold:
     description: 'Approvals required (in percent (50%) or as a number (2)) before a pull requests state is "approved"'
     default: '1'
-  force-changes-requested:
-    description: 'If true, the pull request status is changes_requested regardless of whether the approval_threshold is reached.'
-    default: 'true'
   additional-repositories:
     description: 'List of additional repositories to check for the latest pull request titles containing JIRA IDs. Separate multiple repository names with commas.'
     default: ''
