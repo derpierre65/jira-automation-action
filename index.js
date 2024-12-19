@@ -32,6 +32,10 @@ const statusByPriority = {
   5: PullRequestStatus.MERGED,
 };
 
+function unique(array) {
+  return [ ...new Set(array), ];
+}
+
 async function getReviews(owner, repository, id) {
   const url = `GET https://api.github.com/repos/${owner}/${repository}/pulls/${id}/reviews`;
   core.debug(url);
@@ -153,14 +157,21 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
   const commitMessages = ignoreCommits ? [] : await fetchCommitMessages(owner, repository, pullRequest.number);
   const pullRequestTitle = ignoreTitle ? '' : pullRequest.title;
 
-  // get all issue ids in commit message and pull request title
-  const issueIds = getIssueIds(commitMessages, pullRequestTitle);
+  // get all issue ids in commit message, pull request title and branch name
+  const issueIds = unique([
+    ...getIssueIds(commitMessages, pullRequestTitle),
+    ...getIssueIds(pullRequest.head.ref ?? '', pullRequest.head.ref ?? ''),
+  ]);
   if (!issueIds.length) {
+    core.info('No issue ids found. Skip action');
+
     // do nothing, no issue ids found.
     return {
       status: null,
     };
   }
+
+  core.info(`Found issue ids: ${issueIds.join(', ')}`);
 
   if (pullRequest.merged) {
     return {
