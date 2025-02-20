@@ -195,7 +195,7 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
   // fetch all reviews
   const reviews = await getReviews(owner, repository, pullRequest.number);
   for (const review of reviews) {
-    if (review.user.type === 'Bot') {
+    if (review.user.type === 'Bot' || review.state === 'COMMENTED') {
       continue;
     }
 
