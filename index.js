@@ -6,6 +6,7 @@ let findCommitRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let findTitleRegex = new RegExp(/([A-Za-z]{2,4}-\d+)/g);
 let octokit = null;
 let ignoreTitle = false;
+let ignoreBranch = false;
 let ignoreCommits = false;
 let approvalThreshold = 1;
 
@@ -163,7 +164,7 @@ async function fetchPullRequestStatus(owner, repository, pullRequest) {
   // get all issue ids in commit message, pull request title and branch name
   const issueIds = unique([
     ...getIssueIds(commitMessages, pullRequestTitle),
-    ...getIssueIds(pullRequest.head.ref ?? '', pullRequest.head.ref ?? ''),
+    ...!ignoreBranch ? getIssueIds(pullRequest.head.ref ?? '', pullRequest.head.ref ?? '') : [],
   ]);
   if (!issueIds.length) {
     core.info('No issue ids found. Skip action');
@@ -265,6 +266,7 @@ async function run() {
 
   // load settings
   ignoreTitle = core.getBooleanInput('ignore-title');
+  ignoreBranch = core.getBooleanInput('ignore-branch');
   ignoreCommits = core.getBooleanInput('ignore-commits');
   approvalThreshold = core.getInput('approval-threshold');
   findCommitRegex = loadRegexFromString(core.getInput('find-regex-commits'));

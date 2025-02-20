@@ -8,10 +8,13 @@ inputs:
     description: 'Your GitHub token.'
     required: true
   ignore-title:
-    description: 'Ignore the pull request title to find issue ids'
+    description: 'Ignore the pull request title to find issue ids.'
     default: 'false'
   ignore-commits:
-    description: 'Ignore commit messages to find issue ids'
+    description: 'Ignore commit messages to find issue ids.'
+    default: 'false'
+  ignore-branch:
+    description: 'Ignore branch name to find issue ids.'
     default: 'false'
   find-regex-commits:
     description: 'Regex to find issue ids in commit messages'
