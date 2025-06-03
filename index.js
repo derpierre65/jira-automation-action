@@ -121,8 +121,15 @@ function callWebhook(issueIds, status) {
   const webhookUrls = core.getInput('webhook-urls').split('\n');
   const webhookUrlsByPrefix = {};
   for (const url of webhookUrls) {
-    const colonPosition = url.indexOf(':');
-    webhookUrlsByPrefix[url.slice(0, colonPosition)] = url.slice(colonPosition + 1);
+    const splits = url.split(';');
+    if (splits.length < 3) {
+      continue;
+    }
+
+    webhookUrlsByPrefix[splits[0]] = {
+      url: splits[1],
+      webhookToken: splits[2],
+    };
   }
 
   const webhookIssues = {};
@@ -140,7 +147,7 @@ function callWebhook(issueIds, status) {
 
   for (const key of Object.keys(webhookIssues)) {
     core.debug(`Call webhook ${key} with issue ids: ${webhookIssues[key].join(', ')} and status ${status}`);
-    axios.post(webhookUrlsByPrefix[key], {
+    axios.post(webhookUrlsByPrefix[key].url, {
       issues: webhookIssues[key],
       pullRequest: {
         status,
@@ -149,6 +156,10 @@ function callWebhook(issueIds, status) {
           return label.name;
         }),
       }
+    }, {
+      headers: {
+        'X-Automation-Webhook-Token': webhookUrlsByPrefix[key].webhookToken,
+      },
     });
   }
 }

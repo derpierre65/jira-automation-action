@@ -41,9 +41,9 @@ The provided data can be used with `webhookData.pullRequest.FIELD` in JIRA autom
 #### Examples:
 
 ```text
-FOO:https://webhook-for-foo.com
-BAR:https://webhook-for-bar.com
-*:https://webhook-for-all.com
+FOO;https://webhook-for-foo.com;WebhookToken
+BAR;https://webhook-for-bar.com;WebhookToken
+*;https://webhook-for-all.com;WebhookToken
 ```
 
 ### `additional-reposotires`
